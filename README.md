@@ -39,7 +39,7 @@ Headlines that appear only once (e.g. *"Happy Birthday, My Love! 🎂❤️"*, t
 > ⚠️ When editing text inside `'single quotes'`, use a curly apostrophe `’` (or `\'`) for words like *don't*. A plain `'` would end the text early. Inside the letter's backticks you can type anything except a backtick.
 
 ### Photos
-Your 13 photos are already wired up. See [`images/README.txt`](images/README.txt) to add, remove, reorder or rename them. The layout adapts to any number, and missing photos are skipped automatically.
+Your 15 photos are already wired up. See [`images/README.txt`](images/README.txt) to add, remove, reorder or rename them. The layout adapts to any number, and missing photos are skipped automatically.
 
 ### Music
 Drop your song into `music/` as **`romantic-song.mp3`**. See [`music/README.txt`](music/README.txt). Music stays off until she taps the 🎵 button.

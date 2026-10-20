@@ -35,7 +35,7 @@ const CONFIG = {
     { src: 'images/image1.jpg',         caption: 'Your smile makes everything better.' },
     { src: 'images/image2.jpg',         caption: 'A moment I wish I could live again.' },
     { src: 'images/image3.jpg',         caption: 'My favorite person, always.' },
-    { src: 'images/image-couple2.JPG',  caption: 'Every picture tells a story of us.', alt: 'Our mirror photo together among the trees' },
+    { src: 'images/image-couple2.jpg',  caption: 'Every picture tells a story of us.', alt: 'Our mirror photo together among the trees' },
     { src: 'images/image4.jpg',         caption: 'You make ordinary days feel magical ✨' },
     { src: 'images/image5.jpg',         caption: 'The prettiest view, every single time.' },
     { src: 'images/image6.jpg',         caption: 'I’d choose you in every lifetime.' },
@@ -43,6 +43,8 @@ const CONFIG = {
     { src: 'images/image8.jpg',         caption: 'Still can’t believe you’re mine.' },
     { src: 'images/image9.jpg',         caption: 'My whole heart, in one picture 💕' },
     { src: 'images/image10.jpg',        caption: 'Forever my favorite chapter.' },
+    { src: 'images/image12.jpg',        caption: 'Main character energy, always ✨', alt: 'Her posing on a quiet tree-lined road' },
+    { src: 'images/image13.jpg',        caption: 'Like a fairytale, and you’re the princess 👑', alt: 'Her in a black dress beside a big tree and a green pond' },
     { src: 'images/image11.jpg',        caption: 'Here’s to a million more memories 🥂' },
   ],
 

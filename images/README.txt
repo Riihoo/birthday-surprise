@@ -1,9 +1,9 @@
 📸  PHOTOS FOLDER
 ================
 
-Your 13 photos are already here and already connected to the website:
+Your 15 photos are already here and already connected to the website:
 
-  images-couple1.JPG   image1.jpg ... image11.jpg   image-couple2.JPG
+  images-couple1.JPG   image1.jpg ... image13.jpg   image-couple2.jpg
 
 The list of photos (and their captions) lives at the top of script.js,
 in CONFIG.photos. Each entry looks like this:
