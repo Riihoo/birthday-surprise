@@ -6,7 +6,7 @@ A romantic, interactive birthday surprise website. Plain HTML, CSS and JavaScrip
 
 Double-click **`index.html`**. It opens in your browser and works offline. (The fancy fonts load from Google Fonts when online. Without internet, similar fonts are used instead.)
 
-**To send it to her:** zip the whole `Birthday` folder (keep `images/` and `music/` inside), or host it for free on GitHub Pages or Netlify Drop (drag the folder onto app.netlify.com/drop) and send her the link.
+**To send it to her:** put it online with **GitHub Pages** (free). On GitHub, open the repo → **Settings → Pages** → under *Build and deployment* choose **Deploy from a branch**, branch **main**, folder **/ (root)** → **Save**. After a minute or two the site is live at **https://riihoo.github.io/birthday-surprise/**, and that's the link to send her. (Alternatively zip the whole folder, or drag it onto app.netlify.com/drop.)
 
 ## 💌 The experience
 
@@ -40,6 +40,11 @@ Headlines that appear only once (e.g. *"Happy Birthday, My Love! 🎂❤️"*, t
 
 ### Photos
 Your 15 photos are already wired up. See [`images/README.txt`](images/README.txt) to add, remove, reorder or rename them. The layout adapts to any number, and missing photos are skipped automatically.
+
+### Link preview (the picture that appears when you send the link)
+When you paste the site's link into WhatsApp, Messenger, Telegram, iMessage etc., it shows `og-images/og-image.jpg`: *"Happy Birthday My Love, Neth"* over the sunset. It's a 1200×630 copy of your original `og-images.png`, made small enough for WhatsApp.
+
+The preview tags at the top of `index.html` point to **https://riihoo.github.io/birthday-surprise/**, so the preview works once GitHub Pages is on (see *How to run it*). If you host it elsewhere, replace that address in the 4 marked lines.
 
 ### Music
 `music/romantic-song.mp3` is an **original instrumental composed for this site**: soft piano and music box with a music-box *Happy Birthday* in the middle (2:46, loops). It **starts automatically**. Browsers only allow sound after a tap, so it fades in the moment she taps *Open Your Surprise 💌*. She can pause it with the 🎵 button. Set `autoPlayMusic: false` in `CONFIG` to make it wait for the button instead. To use your own song instead, replace that file. See [`music/README.txt`](music/README.txt).
