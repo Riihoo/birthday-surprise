@@ -8,10 +8,13 @@ Every note was composed for this gift, and "Happy Birthday" is in the
 public domain, so there are no copyright issues.
 
 How it plays on the site:
-• Music is OFF by default. It only starts when she taps the button
-  in the top-right corner, because browsers block music that starts
-  on its own.
-• It fades in gently and loops.
+• It starts automatically. Browsers block sound until the visitor
+  taps something, so in practice it fades in the moment she taps
+  "Open Your Surprise 💌", right as the envelope opens.
+• It loops. The button in the top-right corner pauses and resumes it,
+  and once she pauses it, it stays paused.
+• To turn auto-play off, set  autoPlayMusic: false  in CONFIG at the
+  top of script.js. The music then waits for her to tap the button.
 
 
 USE YOUR OWN SONG INSTEAD

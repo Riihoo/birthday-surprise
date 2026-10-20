@@ -17,8 +17,13 @@ const CONFIG = {
   // Your name, used to sign the letter and the final screen.
   yourName: '[Your Name]',
 
-  // Your song (see music/README.txt). Music stays OFF until she taps the button.
+  // Your song (see music/README.txt).
   music: 'music/romantic-song.mp3',
+
+  // true  = music starts automatically (browsers only allow sound after her first tap,
+  //         so it begins the moment she taps "Open Your Surprise 💌").
+  // false = music stays off until she taps the 🎵 button.
+  autoPlayMusic: true,
 
   // The photo in the glowing circle on the final screen.
   finalePhoto: 'images/images-couple1.JPG',
@@ -457,7 +462,7 @@ function cornerPoppers() {
 
 
 /* =========================================================
-   5. Background music (off by default)
+   5. Background music (auto-starts on her first tap)
    ========================================================= */
 const Music = (() => {
   const audio = $('#bgMusic');
@@ -465,21 +470,26 @@ const Music = (() => {
   const label = $('#musicLabel');
   const VOLUME = .6;
   let playing = false;
-  let fadeRaf = 0;
+  let pending = false;      // a play() request is in progress
+  let userPaused = false;   // she paused it herself → never auto-restart
+  let missingFile = false;  // song file not found → stop trying
+  let fadeTimer = 0;
 
   audio.src = CONFIG.music;
 
+  // Timer-based (not requestAnimationFrame) so the fade still finishes if the tab is in the background
   function fadeTo(target, ms, done) {
-    cancelAnimationFrame(fadeRaf);
+    clearInterval(fadeTimer);
     const from = audio.volume;
     const t0 = performance.now();
-    const step = (now) => {
-      const t = clamp((now - t0) / ms, 0, 1);
+    fadeTimer = setInterval(() => {
+      const t = clamp((performance.now() - t0) / ms, 0, 1);
       audio.volume = from + (target - from) * t;
-      if (t < 1) fadeRaf = requestAnimationFrame(step);
-      else if (done) done();
-    };
-    fadeRaf = requestAnimationFrame(step);
+      if (t >= 1) {
+        clearInterval(fadeTimer);
+        if (done) done();
+      }
+    }, 30);
   }
 
   function render() {
@@ -489,18 +499,22 @@ const Music = (() => {
     label.textContent = playing ? 'Pause music' : 'Play our song';
   }
 
-  async function play() {
-    playing = true;
-    render();
+  /** Resolves to true if music is playing. `quiet` = no message on failure (auto attempts). */
+  async function play({ quiet = false } = {}) {
+    if (playing || pending) return playing;
+    pending = true;
     try {
-      audio.volume = 0;
+      if (audio.paused) audio.volume = 0;
       await audio.play();
+      playing = true;
       fadeTo(VOLUME, 2200);
     } catch (err) {
-      playing = false;
-      render();
-      toast('🎵 Add your song as music/romantic-song.mp3 to hear our music.');
+      if (err && err.name === 'NotSupportedError') missingFile = true;
+      if (!quiet) toast('🎵 Add your song as music/romantic-song.mp3 to hear our music.');
     }
+    pending = false;
+    render();
+    return playing;
   }
 
   function pause() {
@@ -509,8 +523,34 @@ const Music = (() => {
     fadeTo(0, 600, () => audio.pause());
   }
 
-  btn.addEventListener('click', () => (playing ? pause() : play()));
+  btn.addEventListener('click', () => {
+    if (playing) {
+      userPaused = true;
+      pause();
+    } else {
+      userPaused = false;
+      play();
+    }
+  });
   render();
+
+  /* ---- Auto-start ----
+     Browsers block sound until the visitor interacts with the page, so: try right away,
+     and if that's blocked, start on her very first tap / click / key press. */
+  const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
+
+  function onFirstGesture(e) {
+    if (e.target.closest && e.target.closest('#musicBtn')) return; // the button handles itself
+    if (userPaused || missingFile) return disarm();
+    play({ quiet: true }).then((ok) => { if (ok || missingFile) disarm(); });
+  }
+  function arm() { GESTURES.forEach((ev) => document.addEventListener(ev, onFirstGesture, true)); }
+  function disarm() { GESTURES.forEach((ev) => document.removeEventListener(ev, onFirstGesture, true)); }
+
+  if (CONFIG.autoPlayMusic) {
+    arm();
+    play({ quiet: true }).then((ok) => { if (ok) disarm(); });
+  }
 })();
 
 
