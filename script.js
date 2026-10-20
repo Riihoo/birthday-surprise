@@ -10,12 +10,12 @@
    💝 1. PERSONALIZE HERE
    ========================================================= */
 const CONFIG = {
-  // Her name, shown small on the opening screen. Leave '' to show
-  // "For the one who owns my heart" instead.
-  herName: '',
+  // Her name: shown on the opening screen ("For Neth 💕") and the celebration
+  // ("It's your day, Neth"). Leave '' to use "For the one who owns my heart" instead.
+  herName: 'Neth',
 
   // Your name, used to sign the letter and the final screen.
-  yourName: '[Your Name]',
+  yourName: 'Alee',
 
   // Your song (see music/README.txt).
   music: 'music/romantic-song.mp3',
@@ -564,8 +564,10 @@ const Entrance = (() => {
   const main = $('#main');
   let opening = false;
 
-  if (CONFIG.herName.trim()) {
-    $('#entranceEyebrow').textContent = `For ${CONFIG.herName.trim()} 💕`;
+  const herName = CONFIG.herName.trim();
+  if (herName) {
+    $('#entranceEyebrow').textContent = `For ${herName} 💕`;
+    $('#celebrateEyebrow').textContent = `✨ It's your day, ${herName} ✨`;
   }
 
   function open() {

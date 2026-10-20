@@ -24,8 +24,8 @@ Double-click **`index.html`**. It opens in your browser and works offline. (The 
 
 | What | Where in `CONFIG` |
 |---|---|
-| Your name (letter signature + ending) | `yourName: '[Your Name]'` ← **change this!** |
-| Her name on the opening screen | `herName: ''` |
+| Your name (letter signature + ending) | `yourName: 'Alee'` |
+| Her name (opening screen + celebration) | `herName: 'Neth'` |
 | Photos & captions | `photos: [ ... ]` |
 | Round photo on the final screen | `finalePhoto` |
 | Timeline dates & stories | `timeline: [ ... ]`: replace each `date` with the real one, e.g. `'March 14, 2023'` |
@@ -58,7 +58,7 @@ Birthday/
 
 ## 💡 Before you send it
 
-- [ ] Changed `yourName` in `script.js`
+- [x] Set the names (Alee & Neth) in `script.js`
 - [ ] Replaced the timeline dates/stories with your real ones
 - [ ] Read the letter and made it sound like *you*
 - [ ] Listened to the music (or swapped in your own song)
