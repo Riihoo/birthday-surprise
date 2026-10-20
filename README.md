@@ -6,7 +6,9 @@ A romantic, interactive birthday surprise website. Plain HTML, CSS and JavaScrip
 
 Double-click **`index.html`**. It opens in your browser and works offline. (The fancy fonts load from Google Fonts when online. Without internet, similar fonts are used instead.)
 
-**To send it to her:** put it online with **GitHub Pages** (free). On GitHub, open the repo → **Settings → Pages** → under *Build and deployment* choose **Deploy from a branch**, branch **main**, folder **/ (root)** → **Save**. After a minute or two the site is live at **https://riihoo.github.io/birthday-surprise/**, and that's the link to send her. (Alternatively zip the whole folder, or drag it onto app.netlify.com/drop.)
+**To send it to her:** the site is live on Vercel at **https://birthday-surprise-web22.vercel.app/**. Every push to GitHub redeploys it automatically.
+
+> ⚠️ Make sure Vercel's **Deployment Protection is off**, or visitors (and link-preview bots) get a Vercel login page instead of the site: Vercel → project → **Settings → Deployment Protection** → **Vercel Authentication: Disabled** → **Save**.
 
 ## 💌 The experience
 
@@ -44,7 +46,7 @@ Your 15 photos are already wired up. See [`images/README.txt`](images/README.txt
 ### Link preview (the picture that appears when you send the link)
 When you paste the site's link into WhatsApp, Messenger, Telegram, iMessage etc., it shows `og-images/og-image.jpg`: *"Happy Birthday My Love, Neth"* over the sunset. It's a 1200×630 copy of your original `og-images.png`, made small enough for WhatsApp.
 
-The preview tags at the top of `index.html` point to **https://riihoo.github.io/birthday-surprise/**, so the preview works once GitHub Pages is on (see *How to run it*). If you host it elsewhere, replace that address in the 4 marked lines.
+The preview tags at the top of `index.html` point to **https://birthday-surprise-web22.vercel.app/**. If you move the site elsewhere, replace that address in the 4 marked lines.
 
 ### Music
 `music/romantic-song.mp3` is an **original instrumental composed for this site**: soft piano and music box with a music-box *Happy Birthday* in the middle (2:46, loops). It **starts automatically**. Browsers only allow sound after a tap, so it fades in the moment she taps *Open Your Surprise 💌*. She can pause it with the 🎵 button. Set `autoPlayMusic: false` in `CONFIG` to make it wait for the button instead. To use your own song instead, replace that file. See [`music/README.txt`](music/README.txt).
