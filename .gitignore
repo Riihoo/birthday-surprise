@@ -3,6 +3,9 @@
 .claude/
 .vscode/
 
+# Temporary raw audio from music/compose.js
+*.f32
+
 # OS clutter
 .DS_Store
 Thumbs.db

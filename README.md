@@ -42,7 +42,7 @@ Headlines that appear only once (e.g. *"Happy Birthday, My Love! 🎂❤️"*, t
 Your 15 photos are already wired up. See [`images/README.txt`](images/README.txt) to add, remove, reorder or rename them. The layout adapts to any number, and missing photos are skipped automatically.
 
 ### Music
-Drop your song into `music/` as **`romantic-song.mp3`**. See [`music/README.txt`](music/README.txt). Music stays off until she taps the 🎵 button.
+`music/romantic-song.mp3` is an **original instrumental composed for this site**: soft piano and music box with a music-box *Happy Birthday* in the middle (2:46, loops). Music stays off until she taps the 🎵 button. To use your own song instead, replace that file. See [`music/README.txt`](music/README.txt).
 
 ## 📁 Files
 
@@ -61,7 +61,7 @@ Birthday/
 - [ ] Changed `yourName` in `script.js`
 - [ ] Replaced the timeline dates/stories with your real ones
 - [ ] Read the letter and made it sound like *you*
-- [ ] Added `music/romantic-song.mp3` (optional)
+- [ ] Listened to the music (or swapped in your own song)
 - [ ] Opened it on your phone and tapped through everything once
 
 Works in all modern browsers (Chrome, Safari, Edge, Firefox) on phone, tablet and desktop. Animations are lighter for anyone who has "reduce motion" turned on.
