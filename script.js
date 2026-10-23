@@ -166,6 +166,157 @@ function toast(message, ms = 4200) {
   toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
+/** A tiny vibration on phones that support it (most Android phones; iPhones ignore it). */
+function buzz(pattern) {
+  if (reducedMotion || !navigator.vibrate) return;
+  try { navigator.vibrate(pattern); } catch (_) { /* not allowed yet */ }
+}
+
+/** Splits text into characters without breaking emoji apart. */
+const graphemes = (str) => (window.Intl && Intl.Segmenter
+  ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(str)].map((s) => s.segment)
+  : Array.from(str));
+
+/** Wraps every letter of a heading in its own span so the letters can flip in, one by one, in 3D. */
+function splitLetters(el) {
+  el.setAttribute('aria-label', el.textContent.replace(/\s+/g, ' ').trim());
+  let i = 0;
+  [...el.childNodes].forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const frag = document.createDocumentFragment();
+      child.textContent.split(/(\s+)/).forEach((part) => {
+        if (!part) return;
+        if (!part.trim()) { frag.append(' '); return; }
+        const word = document.createElement('span');
+        word.className = 'word';
+        word.setAttribute('aria-hidden', 'true');
+        graphemes(part).forEach((g) => {
+          const ch = document.createElement('span');
+          ch.className = 'ch';
+          ch.style.setProperty('--i', i++);
+          ch.textContent = g;
+          word.append(ch);
+        });
+        frag.append(word);
+      });
+      child.replaceWith(frag);
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      // Styled bits (like the shimmering "My Love!") flip in as one piece
+      const ch = document.createElement('span');
+      ch.className = 'ch';
+      ch.setAttribute('aria-hidden', 'true');
+      ch.style.setProperty('--i', i);
+      i += 3;
+      child.replaceWith(ch);
+      ch.append(child);
+    }
+  });
+}
+$$('[data-split]').forEach(splitLetters);
+
+/** Builds a ring of little hearts that orbits in 3D (passing in front of and behind things). */
+function buildOrbit(el) {
+  const glyphs = el.dataset.orbit.split(' ');
+  const ring = document.createElement('div');
+  ring.className = 'orbit-ring';
+  glyphs.forEach((glyph, k) => {
+    const slot = document.createElement('span');
+    slot.className = 'orbit-slot';
+    slot.style.setProperty('--a', `${(360 / glyphs.length) * k}deg`);
+    const face = document.createElement('span');
+    face.className = 'orbit-glyph';
+    face.textContent = glyph;
+    slot.append(face);
+    ring.append(slot);
+  });
+  el.append(ring);
+}
+$$('[data-orbit]').forEach(buildOrbit);
+
+
+/* =========================================================
+   2b. Tilt: her phone's motion sensor (or the mouse on a computer)
+       turns into 3D depth. Elements with data-tilt="deg" rotate,
+       elements with data-depth="px" drift like parallax layers.
+   ========================================================= */
+const Tilt = (() => {
+  const state = { x: 0, y: 0 };           // smoothed, −1 … 1
+  let tx = 0, ty = 0;                     // where we're easing towards
+  let baseBeta = null, baseGamma = null;  // however she naturally holds the phone counts as "flat"
+  let listening = false, rafId = 0;
+  const visible = new Set();
+
+  function apply(el) {
+    if (el.dataset.tilt) {
+      const d = parseFloat(el.dataset.tilt);
+      el.style.transform = `perspective(900px) rotateX(${(state.y * d).toFixed(2)}deg) rotateY(${(state.x * d).toFixed(2)}deg)`;
+    } else {
+      const d = parseFloat(el.dataset.depth);
+      el.style.transform = `translate3d(${(-state.x * d).toFixed(1)}px, ${(-state.y * d).toFixed(1)}px, 0)`;
+    }
+  }
+
+  function frame() {
+    rafId = 0;
+    state.x += (tx - state.x) * .08;
+    state.y += (ty - state.y) * .08;
+    visible.forEach(apply);
+    if (Math.abs(tx - state.x) > .002 || Math.abs(ty - state.y) > .002) rafId = requestAnimationFrame(frame);
+  }
+  const kick = () => { if (!rafId && !reducedMotion) rafId = requestAnimationFrame(frame); };
+
+  function onOrientation(e) {
+    if (e.beta == null || e.gamma == null) return;
+    let b = e.beta, g = e.gamma;
+    const angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    if (angle === 90) [b, g] = [-g, b];                       // landscape
+    else if (angle === -90 || angle === 270) [b, g] = [g, -b];
+    if (baseBeta === null) { baseBeta = b; baseGamma = g; }
+    baseBeta += (b - baseBeta) * .015;                       // slowly re-centre
+    baseGamma += (g - baseGamma) * .015;
+    tx = clamp((g - baseGamma) / 20, -1, 1);
+    ty = clamp((b - baseBeta) / 20, -1, 1);
+    kick();
+  }
+
+  function listen() {
+    if (listening || reducedMotion) return;
+    listening = true;
+    window.addEventListener('deviceorientation', onOrientation);
+  }
+
+  // Computers: follow the mouse
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    window.addEventListener('pointermove', (e) => {
+      tx = (e.clientX / window.innerWidth) * 2 - 1;
+      ty = (e.clientY / window.innerHeight) * 2 - 1;
+      kick();
+    }, { passive: true });
+  }
+
+  // Android gives motion without asking; iPhone needs permission from a tap (see enable)
+  const needsPermission = typeof DeviceOrientationEvent !== 'undefined'
+    && typeof DeviceOrientationEvent.requestPermission === 'function';
+  if (typeof DeviceOrientationEvent !== 'undefined' && !needsPermission) listen();
+
+  /** Call from inside a tap handler: asks iPhone for motion access. */
+  function enable() {
+    if (!needsPermission || listening) return;
+    DeviceOrientationEvent.requestPermission()
+      .then((res) => { if (res === 'granted') listen(); })
+      .catch(() => {});
+  }
+
+  // Only animate what's on screen
+  const io = new IntersectionObserver((entries) => entries.forEach((en) => {
+    if (en.isIntersecting) { visible.add(en.target); apply(en.target); }
+    else visible.delete(en.target);
+  }));
+  $$('[data-tilt], [data-depth]').forEach((el) => io.observe(el));
+
+  return { state, enable };
+})();
+
 
 /* =========================================================
    3. Floating hearts & sparkles (lightweight canvas)
@@ -231,12 +382,13 @@ function createParticleField(canvas, options = {}) {
     }
     p.x = x;
     p.y = initial ? Math.random() * h : h + 30;
-    p.size = p.heart ? rand(10, 24) : rand(8, 16);
-    p.vy = rand(14, 38);
-    p.sway = rand(8, 34);
+    p.z = rand(.35, 1.3);              // depth: near ones are bigger, faster and drift more when she tilts
+    p.size = (p.heart ? rand(10, 24) : rand(8, 16)) * p.z;
+    p.vy = rand(14, 38) * (.55 + .45 * p.z);
+    p.sway = rand(8, 34) * p.z;
     p.phase = Math.random() * Math.PI * 2;
     p.freq = rand(.35, 1);
-    p.alpha = rand(.35, opts.maxAlpha);
+    p.alpha = rand(.35, opts.maxAlpha) * (.5 + .5 * Math.min(p.z, 1));
     p.color = pick(opts.colors);
     p.rot = rand(-.35, .35);
     p.tw = rand(1.5, 4);
@@ -261,25 +413,28 @@ function createParticleField(canvas, options = {}) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
+    const px = Tilt.state.x * 30, py = Tilt.state.y * 20;
     for (const p of particles) {
       p.y -= p.vy * dt;
       p.phase += p.freq * dt;
       if (p.y < -40) spawn(p, false);
-      const x = p.x + Math.sin(p.phase) * p.sway;
+      const x = p.x + Math.sin(p.phase) * p.sway + px * p.z;
+      const y = p.y + py * p.z;
       // fade in from the bottom and out near the top
       const edgeFade = clamp(p.y / (h * .25), 0, 1) * clamp((h - p.y) / 80, 0, 1);
 
       if (p.heart) {
         ctx.globalAlpha = p.alpha * edgeFade;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.translate(x, p.y);
+        ctx.translate(x, y);
         ctx.rotate(p.rot + Math.sin(p.phase) * .2);
+        ctx.scale(Math.cos(p.phase * 1.7), 1);   // slowly spins round, like a 3D coin
         ctx.drawImage(heartSprite(p.color), -p.size / 2, -p.size / 2, p.size, p.size);
       } else {
         const twinkle = .45 + .55 * Math.sin(now / 1000 * p.tw + p.phase);
         ctx.globalAlpha = p.alpha * edgeFade * Math.max(twinkle, 0);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.drawImage(sparkleSprite, x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        ctx.drawImage(sparkleSprite, x - p.size / 2, y - p.size / 2, p.size, p.size);
       }
     }
     ctx.globalAlpha = 1;
@@ -572,6 +727,8 @@ const Entrance = (() => {
 
   function open() {
     if (opening) return;
+    Tilt.enable();                        // must be inside her tap (iPhone asks for motion access)
+    buzz(25);
     opening = true;
     openBtn.disabled = true;
     entrance.classList.add('opening');
@@ -613,6 +770,7 @@ const Entrance = (() => {
   }
 
   openBtn.addEventListener('click', open);
+  envelope.addEventListener('click', open);   // tapping the envelope itself works too
   return { show };
 })();
 
@@ -622,33 +780,121 @@ const Entrance = (() => {
    ========================================================= */
 const Cake = (() => {
   const cake = $('#cake');
+  const scene = cake.closest('.cake-scene');
   const hint = $('#cakeHint');
   const candles = $$('.candle', cake);
+  const micBtn = $('#micBtn');
+  const micLabel = $('#micLabel');
   const HINT = hint.textContent;
+  const MIC_LABEL = micLabel.textContent;
+  const isOut = (c) => c.classList.contains('out');
 
-  candles.forEach((candle, i) => {
-    candle.addEventListener('click', () => {
-      if (candle.classList.contains('out')) return;
-      candle.classList.add('out');
-      candle.setAttribute('aria-label', `Candle ${i + 1} blown out`);
+  function blowOut(candle) {
+    if (isOut(candle)) return;
+    candle.classList.add('out');
+    candle.setAttribute('aria-label', `Candle ${candles.indexOf(candle) + 1} blown out`);
 
-      if (candles.every((c) => c.classList.contains('out'))) {
-        cake.classList.add('wished');
-        hint.textContent = 'Wish made ✨ I hope every single one comes true.';
-        Confetti.fromElement(cake, { count: 150, spread: Math.PI * .8, power: 1.1, hearts: .4 });
-      } else {
-        const left = candles.filter((c) => !c.classList.contains('out')).length;
-        hint.textContent = left === 1 ? 'Just one more… 🕯️' : 'Keep going… 🕯️';
-      }
-    });
+    if (candles.every(isOut)) {
+      buzz([30, 40, 30, 40, 90]);
+      stopMic();
+      micBtn.hidden = true;
+      scene.classList.add('wished');
+      hint.textContent = 'Wish made ✨ I hope every single one comes true.';
+      Confetti.fromElement(cake, { count: 150, spread: Math.PI * .8, power: 1.1, hearts: .4 });
+    } else {
+      buzz(18);
+      const left = candles.filter((c) => !isOut(c)).length;
+      hint.textContent = left === 1 ? 'Just one more… 🕯️' : 'Keep going… 🕯️';
+    }
+  }
+  candles.forEach((candle) => candle.addEventListener('click', () => blowOut(candle)));
+
+  /* ---- Blow into the phone's microphone to blow the candles out ---- */
+  let mic = null, starting = false;
+  const canListen = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  micBtn.hidden = !canListen;
+
+  async function startMic() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();                 // created inside the tap so iPhone allows it
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
+      await ctx.resume();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      const now = performance.now();
+      mic = { stream, ctx, analyser, data: new Uint8Array(analyser.fftSize), loud: 0, cool: 0, raf: 0, last: now, until: now + 30000 };
+      micBtn.classList.add('listening');
+      micLabel.textContent = 'Listening… blow!';
+      hint.textContent = 'Blow gently on your phone 🌬️';
+      mic.raf = requestAnimationFrame(listen);
+    } catch (_) {
+      ctx.close();
+      toast('🎤 No microphone? No problem, just tap the candles 🕯️');
+    }
+  }
+
+  function listen(now) {
+    if (!mic) return;
+    const dt = Math.min(now - mic.last, 100);
+    mic.last = now;
+    mic.analyser.getByteTimeDomainData(mic.data);
+    let sum = 0;
+    for (let k = 0; k < mic.data.length; k++) {
+      const v = (mic.data[k] - 128) / 128;
+      sum += v * v;
+    }
+    const rms = Math.sqrt(sum / mic.data.length);
+    micBtn.style.setProperty('--lvl', Math.min(rms * 4, 1).toFixed(2));
+
+    // A breath is loud *and* lasts a moment, so a short noise won't count
+    mic.loud = rms > .14 ? mic.loud + dt : Math.max(mic.loud - dt * 2, 0);
+    mic.cool -= dt;
+    if (mic.loud > 130 && mic.cool <= 0) {
+      const lit = candles.find((c) => !isOut(c));
+      if (lit) blowOut(lit);
+      mic.loud = 0;
+      mic.cool = 380;
+    }
+    if (!mic) return;                     // the last candle just stopped it
+    if (now > mic.until) {
+      stopMic();
+      if (!candles.every(isOut)) hint.textContent = HINT;
+      return;
+    }
+    mic.raf = requestAnimationFrame(listen);
+  }
+
+  function stopMic() {
+    if (!mic) return;
+    cancelAnimationFrame(mic.raf);
+    mic.stream.getTracks().forEach((t) => t.stop());
+    mic.ctx.close();
+    mic = null;
+    micBtn.classList.remove('listening');
+    micBtn.style.removeProperty('--lvl');
+    micLabel.textContent = MIC_LABEL;
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (mic) return stopMic();
+    if (starting) return;
+    starting = true;
+    startMic().finally(() => { starting = false; });
   });
 
   function reset() {
+    stopMic();
     candles.forEach((c, i) => {
       c.classList.remove('out');
       c.setAttribute('aria-label', `Blow out candle ${i + 1}`);
     });
-    cake.classList.remove('wished');
+    scene.classList.remove('wished');
+    micBtn.hidden = !canListen;
     hint.textContent = HINT;
   }
 
@@ -684,23 +930,27 @@ function resetReveals() {
 const Gallery = (() => {
   const grid = $('#gallery');
   const empty = $('#galleryEmpty');
+  const ui = $('#carouselUi');
+  const countEl = $('#carCount');
+  const toggle = $('#galleryToggle');
   const tilts = [-2.2, 1.6, -1.2, 2, -1.6, 1.1, -.8, 1.8];
 
   const photos = CONFIG.photos.length
     ? CONFIG.photos
     : Array.from({ length: 15 }, (_, i) => ({ src: `images/photo${i + 1}.jpg` }));
 
-  function checkEmpty() {
-    empty.hidden = grid.children.length > 0;
-  }
+  let cards = [];
+  let mode = 'carousel';
+  let pos = 0, target = 0;          // which photo is in front (fractional while moving)
+  let cardW = 260, rafId = 0, last = 0, active = -1;
+  let drag = null, moved = false;
 
   photos.forEach((photo, i) => {
     const caption = photo.caption ?? (CONFIG.photos.length ? '' : DEFAULT_CAPTIONS[i % DEFAULT_CAPTIONS.length]);
 
     const card = document.createElement('figure');
-    card.className = 'photo-card reveal';
+    card.className = 'photo-card';
     card.style.setProperty('--rot', `${tilts[i % tilts.length]}deg`);
-    card.style.setProperty('--delay', `${(i % 3) * 90}ms`);
     card.dataset.caption = caption;
 
     const btn = document.createElement('button');
@@ -710,26 +960,180 @@ const Gallery = (() => {
 
     const img = document.createElement('img');
     img.alt = photo.alt || `A beautiful memory of us — photo ${i + 1}`;
-    img.loading = 'lazy';
     img.decoding = 'async';
+    img.draggable = false;
     img.addEventListener('load', () => card.classList.add('loaded'), { once: true });
-    img.addEventListener('error', () => { card.remove(); checkEmpty(); }, { once: true }); // missing photo? just skip it
+    img.addEventListener('error', () => { card.remove(); refresh(); }, { once: true }); // missing photo? just skip it
     img.src = photo.src;
 
     btn.append(img);
-    btn.addEventListener('click', () => Lightbox.open(card));
+    btn.addEventListener('click', () => {
+      if (moved) return;                                   // that was a swipe, not a tap
+      const k = cards.indexOf(card);
+      if (mode === 'carousel' && k !== active) return goTo(k);
+      Lightbox.open(card);
+    });
     card.append(btn);
 
-    if (caption) {
-      const figcaption = document.createElement('figcaption');
-      figcaption.textContent = caption;
-      card.append(figcaption);
-    }
+    const figcaption = document.createElement('figcaption');
+    figcaption.textContent = caption;
+    card.append(figcaption);
     grid.append(card);
   });
 
-  checkEmpty();
-  return { grid };
+  /* ---- 3D coverflow ---- */
+  const n = () => cards.length;
+  const wraps = () => n() > 3;
+
+  /** Signed distance of card i from the front, the short way round. */
+  function offset(i) {
+    const d = i - pos;
+    return wraps() ? ((d % n()) + n() * 1.5) % n() - n() / 2 : d;
+  }
+
+  function layout() {
+    if (mode !== 'carousel' || !n()) return;
+    const near = cardW * .6, far = cardW * .22;
+    cards.forEach((card, i) => {
+      const d = offset(i), ad = Math.abs(d);
+      if (ad > 3.4) { card.style.visibility = 'hidden'; return; }
+      const x = Math.sign(d) * (Math.min(ad, 1) * near + Math.max(ad - 1, 0) * far);
+      card.style.visibility = '';
+      card.style.transform = `translate3d(${x.toFixed(1)}px, 0, ${(-ad * cardW * .5).toFixed(1)}px) rotateY(${(-clamp(d, -1, 1) * 52).toFixed(2)}deg)`;
+      card.style.zIndex = String(100 - Math.round(ad * 10));
+      card.style.opacity = String(clamp(3.4 - ad, 0, 1).toFixed(3));
+      card.style.setProperty('--shade', clamp(ad * .32, 0, .55).toFixed(3));
+    });
+
+    const now = ((Math.round(pos) % n()) + n()) % n();
+    if (now !== active) {
+      active = now;
+      cards.forEach((c, i) => c.classList.toggle('is-active', i === active));
+      countEl.textContent = `${active + 1} / ${n()}`;
+      if (drag && drag.active) buzz(6);                    // a little "tick" as each photo passes
+    }
+  }
+
+  function tick(now) {
+    const dt = Math.min((now - last) / 1000, .05);
+    last = now;
+    pos += (target - pos) * (1 - Math.exp(-dt * (reducedMotion ? 40 : 9)));
+    if (Math.abs(target - pos) < .002) {
+      pos = target;
+      if (wraps()) pos = target = ((pos % n()) + n()) % n();
+      rafId = 0;
+      layout();
+      return;
+    }
+    layout();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function settle(to) {
+    target = wraps() ? to : clamp(to, 0, n() - 1);
+    if (!rafId) {
+      last = performance.now();
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  const goTo = (i) => settle(Math.round(pos + offset(i)));
+  const step = (dir) => { buzz(8); settle(Math.round(target) + dir); };
+
+  /** Jump straight to a photo (used when the full-screen viewer closes). */
+  function show(i) {
+    pos = target = i;
+    layout();
+  }
+
+  function measure() {
+    if (cards[0]) cardW = cards[0].offsetWidth || cardW;
+  }
+
+  function refresh() {
+    cards = $$('.photo-card', grid);
+    empty.hidden = n() > 0;
+    ui.hidden = mode !== 'carousel' || n() < 2;
+    toggle.hidden = n() < 2;
+    if (!n()) { grid.hidden = true; return; }
+    if (pos > n() - 1) pos = target = 0;
+    active = -1;
+    measure();
+    layout();
+  }
+
+  /* ---- Swipe with a finger (or drag with the mouse) ---- */
+  grid.addEventListener('pointerdown', (e) => {
+    moved = false;
+    if (mode !== 'carousel' || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const t = performance.now();
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, pos, lastX: e.clientX, lastT: t, v: 0, active: false };
+  });
+
+  grid.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.active) {
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+      drag.active = moved = true;
+      grid.setPointerCapture(e.pointerId);
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+    const t = performance.now();
+    drag.v = .7 * ((e.clientX - drag.lastX) / Math.max(t - drag.lastT, 1)) + .3 * drag.v;   // px per ms
+    drag.lastX = e.clientX;
+    drag.lastT = t;
+    pos = target = drag.pos - dx / (cardW * .6);
+    layout();
+  });
+
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { active: wasDragging, v } = drag;
+    drag = null;
+    if (wasDragging) settle(Math.round(pos - clamp(v * 1000 / (cardW * .6) * .22, -3, 3)));  // flick = momentum
+  }
+  grid.addEventListener('pointerup', endDrag);
+  grid.addEventListener('pointercancel', endDrag);
+
+  grid.addEventListener('keydown', (e) => {
+    if (mode !== 'carousel') return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+  });
+  $('#carNext').addEventListener('click', () => step(1));
+  $('#carPrev').addEventListener('click', () => step(-1));
+
+  /* ---- Switch between the 3D carousel and a grid of all photos ---- */
+  function setMode(m) {
+    mode = m;
+    grid.classList.toggle('is-carousel', m === 'carousel');
+    grid.classList.toggle('is-grid', m === 'grid');
+    toggle.textContent = m === 'carousel' ? '▦ See all photos at once' : '◎ Back to the 3D carousel';
+    toggle.setAttribute('aria-pressed', String(m === 'grid'));
+    if (m === 'grid') {
+      cards.forEach((c) => {
+        c.style.transform = c.style.zIndex = c.style.opacity = c.style.visibility = '';
+        c.classList.remove('is-active');
+      });
+    }
+    refresh();
+  }
+  toggle.addEventListener('click', () => {
+    const top = grid.getBoundingClientRect().top;
+    setMode(mode === 'carousel' ? 'grid' : 'carousel');
+    if (top < 0) grid.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { measure(); layout(); }, 120);
+  });
+
+  refresh();
+  return { grid, show, get isCarousel() { return mode === 'carousel'; } };
 })();
 
 
@@ -749,16 +1153,29 @@ const Lightbox = (() => {
   let lastFocus = null;
   let closeTimer;
 
-  function render(i, animate) {
+  /** `dir` (1 = next, −1 = previous) makes the photo swing away in 3D and the new one swing in. */
+  function render(i, animate, dir = 0) {
     index = (i + cards.length) % cards.length;
     const card = cards[index];
     const source = $('img', card);
+
+    if (animate && dir && !reducedMotion) {
+      img.style.transition = '';
+      img.style.transform = `translateX(${-dir * 55}vw) rotateY(${dir * 40}deg) scale(.85)`;
+    }
 
     const apply = () => {
       img.src = source.currentSrc || source.src;
       img.alt = source.alt;
       caption.textContent = card.dataset.caption || '';
       count.textContent = `${index + 1} / ${cards.length}`;
+      if (dir && !reducedMotion) {          // start the new photo on the other side…
+        img.style.transition = 'none';
+        img.style.transform = `translateX(${dir * 55}vw) rotateY(${-dir * 40}deg) scale(.85)`;
+        void img.offsetWidth;
+        img.style.transition = '';
+        img.style.transform = '';            // …and let it swing to the middle
+      }
       const done = () => img.classList.remove('swap');
       if (img.decode) img.decode().then(done, done); else done();
 
@@ -797,11 +1214,12 @@ const Lightbox = (() => {
     box.classList.remove('open');
     setLock('lb-open', false);
     closeTimer = setTimeout(() => { box.hidden = true; }, 350);
+    if (Gallery.isCarousel) Gallery.show(index);   // the carousel waits on the photo she was looking at
     if (lastFocus) lastFocus.focus({ preventScroll: true });
   }
 
-  const next = () => render(index + 1, true);
-  const prev = () => render(index - 1, true);
+  const next = () => render(index + 1, true, 1);
+  const prev = () => render(index - 1, true, -1);
 
   closeBtn.addEventListener('click', close);
   nextBtn.addEventListener('click', next);
@@ -822,14 +1240,26 @@ const Lightbox = (() => {
     }
   });
 
-  // Swipe left / right on phones
-  let touchX = null;
-  box.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  // Swipe left / right on phones: the photo follows her finger and tilts in 3D
+  let touchX = null, dragX = 0;
+  box.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { touchX = null; return; }
+    touchX = e.touches[0].clientX;
+    dragX = 0;
+  }, { passive: true });
+  box.addEventListener('touchmove', (e) => {
+    if (touchX === null || cards.length < 2 || reducedMotion) return;
+    dragX = e.touches[0].clientX - touchX;
+    img.style.transition = 'none';
+    img.style.transform = `translateX(${dragX}px) rotateY(${dragX * .08}deg)`;
+  }, { passive: true });
   box.addEventListener('touchend', (e) => {
     if (touchX === null) return;
     const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 50 && cards.length > 1) (dx < 0 ? next : prev)();
     touchX = null;
+    img.style.transition = '';
+    if (Math.abs(dx) > 50 && cards.length > 1) { buzz(8); (dx < 0 ? next : prev)(); }
+    else img.style.transform = '';
   });
 
   return { open, close };
@@ -889,10 +1319,7 @@ const Letter = (() => {
   $('#sigName').textContent = CONFIG.yourName;
   $('#letterFull').textContent = `${text}\n\n${CONFIG.signOff} ${CONFIG.yourName}`;
 
-  // Split into characters without breaking emoji apart
-  const chars = window.Intl && Intl.Segmenter
-    ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map((s) => s.segment)
-    : Array.from(text);
+  const chars = graphemes(text);
 
   const node = document.createTextNode('');
   typedEl.append(node);
@@ -984,9 +1411,67 @@ const Gift = (() => {
     }
   }
 
+  /* ---- The 3D box slowly turns by itself; she can spin it with a finger ---- */
+  const cube = $('#giftCube');
+  let ry = -28, rx = -24, spin = 0, visible = false, rafId = 0, last = 0;
+  let drag = null, dragged = false;
+
+  const draw = () => { cube.style.transform = `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`; };
+
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, .05);
+    last = now;
+    if (!drag) {
+      spin += ((opened ? 8 : 22) - spin) * (1 - Math.exp(-dt * 1.2));   // ease back to a gentle idle turn
+      ry += spin * dt;
+      rx += (-24 - rx) * (1 - Math.exp(-dt * 3));
+    }
+    draw();
+    rafId = visible ? requestAnimationFrame(frame) : 0;
+  }
+
+  function run() {
+    if (!rafId && visible && !reducedMotion) {
+      last = performance.now();
+      rafId = requestAnimationFrame(frame);
+    }
+  }
+  new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; run(); }).observe(stage);
+  draw();
+
+  box.addEventListener('pointerdown', (e) => {
+    dragged = false;
+    if (reducedMotion) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, ry, rx, lastX: e.clientX, lastT: performance.now(), v: 0, active: false };
+  });
+  box.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.active) {
+      if (Math.abs(dx) < 7 || Math.abs(dx) < Math.abs(dy)) return;
+      drag.active = dragged = true;
+      box.setPointerCapture(e.pointerId);
+    }
+    const t = performance.now();
+    drag.v = .7 * ((e.clientX - drag.lastX) / Math.max(t - drag.lastT, 1)) + .3 * drag.v;
+    drag.lastX = e.clientX;
+    drag.lastT = t;
+    ry = drag.ry + dx * .7;
+    rx = clamp(drag.rx - dy * .25, -45, -5);
+    if (!rafId) draw();
+  });
+  const endSpin = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (drag.active) spin = clamp(drag.v * 700, -900, 900);   // fling it and it keeps spinning
+    drag = null;
+  };
+  box.addEventListener('pointerup', endSpin);
+  box.addEventListener('pointercancel', endSpin);
+
   box.addEventListener('click', () => {
-    if (opened) return;
+    if (opened || dragged) return;
     opened = true;
+    buzz([20, 30, 20, 30, 80]);
     box.classList.add('opened');
     stage.classList.add('opened');
     box.setAttribute('aria-label', 'Gift opened');
@@ -1030,6 +1515,15 @@ const Finale = (() => {
   $('#finalePhoto').src = CONFIG.finalePhoto;
   $('#finaleName').textContent = CONFIG.yourName;
 
+  // Our photo is a 3D card: tap it to flip it over
+  const flip = $('#flipPhoto');
+  flip.addEventListener('click', () => {
+    const on = flip.classList.toggle('flipped');
+    flip.setAttribute('aria-pressed', String(on));
+    buzz(12);
+    if (on) setTimeout(() => Confetti.fromElement(flip, { count: 45, spread: Math.PI * 1.4, power: .6, hearts: .8 }), 350);
+  });
+
   // Twinkling stars
   const starCount = window.innerWidth < 640 ? 60 : 110;
   const frag = document.createDocumentFragment();
@@ -1067,7 +1561,43 @@ const Finale = (() => {
   }, { threshold: .45 });
   observer.observe(section);
 
-  return { reset() { celebrated = false; } };
+  return {
+    reset() {
+      celebrated = false;
+      flip.classList.remove('flipped');
+      flip.setAttribute('aria-pressed', 'false');
+    },
+  };
+})();
+
+
+/* =========================================================
+   14b. Chapter dock (bottom navigation, like a phone app)
+   ========================================================= */
+(() => {
+  const dock = $('#dock');
+  const buttons = $$('button', dock);
+  const indicator = $('.dock-indicator', dock);
+  const sections = buttons.map((b) => $(b.dataset.scroll));
+
+  function setActive(i) {
+    if (i < 0) return;
+    buttons.forEach((b, k) => {
+      b.classList.toggle('active', k === i);
+      if (k === i) b.setAttribute('aria-current', 'true');
+      else b.removeAttribute('aria-current');
+    });
+    indicator.style.transform = `translateX(${buttons[i].offsetLeft}px)`;
+  }
+
+  // Whichever chapter crosses the middle of the screen is the current one
+  const io = new IntersectionObserver((entries) => entries.forEach((en) => {
+    if (en.isIntersecting) setActive(sections.indexOf(en.target));
+  }), { rootMargin: '-45% 0px -50% 0px' });
+  sections.forEach((s) => io.observe(s));
+
+  buttons.forEach((b) => b.addEventListener('click', () => buzz(8)));
+  setActive(0);
 })();
 
 /** Restart the whole experience from the envelope. */
@@ -1136,7 +1666,7 @@ $$('[data-scroll]').forEach((btn) => {
 
 document.addEventListener('click', (e) => {
   if (!document.body.classList.contains('started') || reducedMotion) return;
-  if (e.target.closest('button, a, .lightbox, .paper')) return;
+  if (e.target.closest('button, a, .lightbox, .paper, .gallery, .dock')) return;
   const heart = document.createElement('span');
   heart.className = 'pop-heart';
   heart.textContent = pick(['❤', '💕', '💖']);

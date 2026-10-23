@@ -33,6 +33,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Dancing+Script:wght@500;700&family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
+
+  <!-- Vercel Web Analytics: counts visitors & page views (see the Analytics tab in Vercel).
+       This is the plain-HTML version of `inject()` from @vercel/analytics. The script only
+       exists on the Vercel deployment, so it does nothing when the page is opened locally. -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
 
@@ -67,19 +75,24 @@
 
     <div class="entrance-inner">
       <p class="eyebrow entrance-eyebrow" id="entranceEyebrow">For the one who owns my heart</p>
-      <h1 class="entrance-title">Hey, My Beautiful Girl… <span class="beat" aria-hidden="true">❤️</span></h1>
+      <h1 class="entrance-title" data-split>Hey, My Beautiful Girl… <span class="beat" aria-hidden="true">❤️</span></h1>
       <p class="entrance-sub">I have something special for you.</p>
 
-      <!-- Envelope (pure CSS) -->
-      <div class="envelope" id="envelope" aria-hidden="true">
-        <div class="env-back"></div>
-        <div class="env-letter">
-          <span class="env-letter-text">Happy Birthday</span>
-          <span class="env-letter-heart">❤</span>
+      <!-- 3D scene: the envelope tilts with her phone, hearts orbit around it -->
+      <div class="scene3d env-scene" data-tilt="14">
+        <div class="orbit" data-orbit="❤ 💖 ✨ 💕 ❤ ✨ 💗 ✨" aria-hidden="true"></div>
+        <!-- Envelope (pure CSS) -->
+        <div class="envelope" id="envelope" aria-hidden="true">
+          <div class="env-back"></div>
+          <div class="env-letter">
+            <span class="env-letter-text">Happy Birthday</span>
+            <span class="env-letter-heart">❤</span>
+          </div>
+          <div class="env-front"></div>
+          <div class="env-flap"></div>
+          <div class="env-seal">❤</div>
         </div>
-        <div class="env-front"></div>
-        <div class="env-flap"></div>
-        <div class="env-seal">❤</div>
+        <div class="floor-shadow" aria-hidden="true"></div>
       </div>
 
       <button id="openBtn" class="btn btn-primary btn-pulse" type="button">Open Your Surprise 💌</button>
@@ -106,7 +119,7 @@
 
       <div class="container narrow center">
         <p class="eyebrow stagger" id="celebrateEyebrow" style="--d:.1s">✨ It's your day ✨</p>
-        <h2 id="celebrateTitle" class="glow-title stagger" style="--d:.25s" tabindex="-1">
+        <h2 id="celebrateTitle" class="glow-title stagger" style="--d:.25s" tabindex="-1" data-split>
           Happy Birthday, <em>My&nbsp;Love!</em> <span class="title-emoji">🎂❤️</span>
         </h2>
 
@@ -120,17 +133,23 @@
 
         <!-- Interactive cake: tap the candles to blow them out -->
         <div class="cake-wrap stagger" style="--d:.75s">
-          <div class="cake" id="cake">
-            <div class="candles">
-              <button class="candle" type="button" aria-label="Blow out candle 1"><span class="flame"></span><span class="smoke"></span></button>
-              <button class="candle" type="button" aria-label="Blow out candle 2"><span class="flame"></span><span class="smoke"></span></button>
-              <button class="candle" type="button" aria-label="Blow out candle 3"><span class="flame"></span><span class="smoke"></span></button>
+          <div class="scene3d cake-scene" data-tilt="9">
+            <div class="cake-halo" aria-hidden="true"></div>
+            <div class="cake" id="cake">
+              <div class="plate"></div>
+              <div class="tier tier-bottom"></div>
+              <div class="tier tier-top"></div>
+              <div class="candles">
+                <button class="candle" type="button" aria-label="Blow out candle 1"><span class="flame"></span><span class="smoke"></span></button>
+                <button class="candle" type="button" aria-label="Blow out candle 2"><span class="flame"></span><span class="smoke"></span></button>
+                <button class="candle" type="button" aria-label="Blow out candle 3"><span class="flame"></span><span class="smoke"></span></button>
+              </div>
             </div>
-            <div class="tier tier-top"></div>
-            <div class="tier tier-bottom"></div>
-            <div class="plate"></div>
           </div>
           <p class="cake-hint" id="cakeHint" aria-live="polite">Close your eyes, make a wish… then tap the candles 🕯️</p>
+          <button class="btn btn-ghost btn-small mic-btn" id="micBtn" type="button" hidden>
+            <span class="mic-level" aria-hidden="true"></span>🎤 <span id="micLabel">Or blow on your phone</span>
+          </button>
         </div>
 
         <button class="btn btn-primary stagger" style="--d:.95s" type="button" data-scroll="#memories">See Our Memories 📸</button>
@@ -150,14 +169,24 @@
         <header class="section-head reveal">
           <p class="eyebrow">Chapter I</p>
           <h2 id="memoriesTitle" class="section-title">Our Memories</h2>
-          <p class="section-sub">Every picture tells a little piece of our story. Tap any photo to see it up close.</p>
+          <p class="section-sub">Every picture tells a little piece of our story. Swipe through them, and tap one to see it up close.</p>
           <div class="divider" aria-hidden="true">❤</div>
         </header>
 
-        <div class="gallery" id="gallery"></div>
+        <!-- 3D swipe carousel (switches to a grid with the button below) -->
+        <div class="gallery is-carousel reveal" id="gallery" tabindex="0" aria-roledescription="carousel" aria-label="Our photos"></div>
+        <div class="carousel-ui reveal" id="carouselUi">
+          <button class="round-btn" id="carPrev" type="button" aria-label="Previous photo">‹</button>
+          <span class="car-count" id="carCount" aria-live="polite"></span>
+          <button class="round-btn" id="carNext" type="button" aria-label="Next photo">›</button>
+        </div>
         <p class="gallery-empty" id="galleryEmpty" hidden>
           Our photos will appear here 💕<br><small>(Add them to the <code>images/</code> folder — see README.md)</small>
         </p>
+
+        <div class="center gallery-toggle-wrap reveal">
+          <button class="link-btn" id="galleryToggle" type="button" aria-pressed="false">▦ See all photos at once</button>
+        </div>
 
         <div class="center section-next reveal">
           <button class="btn btn-ghost" type="button" data-scroll="#story">Read Our Story 📖</button>
@@ -243,13 +272,30 @@
         <div class="gift-stage" id="giftStage">
           <div class="gift-rays" aria-hidden="true"></div>
           <div class="gift-glow" aria-hidden="true"></div>
+          <!-- A real 3D box: spin it with a finger, tap to open -->
           <button class="gift" id="giftBox" type="button" aria-label="Open your gift">
-            <span class="gift-lid"><span class="gift-bow"></span></span>
-            <span class="gift-body"></span>
+            <span class="gift-cube" id="giftCube">
+              <span class="g-face g-front"></span>
+              <span class="g-face g-back"></span>
+              <span class="g-face g-right"></span>
+              <span class="g-face g-left"></span>
+              <span class="g-face g-bottom"></span>
+              <span class="g-inner"></span>
+              <span class="g-beam"><i></i><i></i></span>
+              <span class="g-lid">
+                <span class="g-face l-top"></span>
+                <span class="g-face l-front"></span>
+                <span class="g-face l-back"></span>
+                <span class="g-face l-right"></span>
+                <span class="g-face l-left"></span>
+                <span class="g-bow"><i></i><i></i></span>
+              </span>
+            </span>
           </button>
+          <div class="gift-floor" aria-hidden="true"></div>
           <div class="gift-hearts" id="giftHearts" aria-hidden="true"></div>
         </div>
-        <p class="gift-hint" id="giftHint">Tap the gift to open it ✨</p>
+        <p class="gift-hint" id="giftHint">Spin it with your finger… then tap to open ✨</p>
 
         <div class="gift-reveal glass" id="giftReveal" hidden>
           <p class="gift-message">My favorite gift in life is having you in my world. ❤️</p>
@@ -264,17 +310,33 @@
          SECTION 7 — FINAL SCREEN
          ===================================================== -->
     <section id="finale" class="finale" aria-labelledby="finaleTitle">
-      <div class="stars" id="stars" aria-hidden="true"></div>
-      <div class="moon" aria-hidden="true"></div>
+      <!-- Layers move by different amounts when she tilts her phone (depth) -->
+      <div class="stars" id="stars" data-depth="6" aria-hidden="true"></div>
+      <div class="moon-wrap" data-depth="14" aria-hidden="true"><div class="moon"></div></div>
       <span class="shooting-star s1" aria-hidden="true"></span>
       <span class="shooting-star s2" aria-hidden="true"></span>
-      <div class="finale-hearts" id="finaleHearts" aria-hidden="true"></div>
+      <div class="finale-hearts" id="finaleHearts" data-depth="22" aria-hidden="true"></div>
 
       <div class="container narrow center finale-content">
-        <div class="finale-photo reveal">
-          <img id="finalePhoto" src="" alt="The two of us together" loading="lazy" decoding="async">
+        <div class="reveal">
+          <div class="scene3d photo-scene" data-tilt="12">
+            <div class="orbit orbit-sm" data-orbit="✨ ❤ ✨ 💖 ✨ ❤" aria-hidden="true"></div>
+            <button class="flip-photo" id="flipPhoto" type="button" aria-pressed="false" aria-label="Flip our photo">
+              <span class="flip-inner">
+                <span class="flip-face flip-front">
+                  <img id="finalePhoto" src="" alt="The two of us together" loading="lazy" decoding="async">
+                </span>
+                <span class="flip-face flip-back">
+                  <span class="flip-msg">I love you</span>
+                  <span class="flip-heart">❤</span>
+                  <span class="flip-sub">more than yesterday,<br>less than tomorrow</span>
+                </span>
+              </span>
+            </button>
+          </div>
         </div>
-        <h2 id="finaleTitle" class="finale-title reveal">Happy Birthday, My Princess ❤️</h2>
+        <p class="flip-hint reveal">tap our photo ↺</p>
+        <h2 id="finaleTitle" class="finale-title reveal" data-split>Happy Birthday, My Princess ❤️</h2>
         <p class="finale-sub reveal">Today, tomorrow, and every day, I hope you feel as loved as you make me feel.</p>
         <div class="reveal">
           <button id="replayBtn" class="btn btn-gold" type="button">Replay Our Surprise ✨</button>
@@ -284,6 +346,18 @@
     </section>
 
   </main>
+
+
+  <!-- ============ Chapter dock (phone-style bottom navigation) ============ -->
+  <nav class="dock" id="dock" aria-label="Chapters">
+    <span class="dock-indicator" aria-hidden="true"></span>
+    <button type="button" data-scroll="#celebrate" aria-label="Celebration">🎂</button>
+    <button type="button" data-scroll="#memories" aria-label="Our memories">📸</button>
+    <button type="button" data-scroll="#story" aria-label="Our love story">📖</button>
+    <button type="button" data-scroll="#letter" aria-label="The letter">💌</button>
+    <button type="button" data-scroll="#gift" aria-label="The gift">🎁</button>
+    <button type="button" data-scroll="#finale" aria-label="The stars">✨</button>
+  </nav>
 
 
   <!-- ============ Lightbox (full-screen photo viewer) ============ -->

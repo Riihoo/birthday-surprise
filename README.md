@@ -12,13 +12,15 @@ Double-click **`index.html`**. It opens in your browser and works offline. (The 
 
 ## 💌 The experience
 
-1. **Entrance**: a glowing pink screen with floating hearts and an envelope. Tapping *Open Your Surprise 💌* opens the envelope and reveals the site.
-2. **Celebration**: glowing headline, your message, balloons, confetti, and a cake whose candles she taps to blow out after making a wish.
-3. **Our Memories**: scrapbook polaroid gallery with captions. Tap a photo for a full-screen viewer (arrows, keyboard and swipe all work).
-4. **Our Love Story**: an animated timeline. The line draws itself as she scrolls, and the last milestone shows today's date automatically.
-5. **The Letter**: cream paper; your letter writes itself in handwriting when she scrolls to it.
-6. **The Gift**: a wiggling gift box. Tapping it bursts it open with hearts and confetti and reveals your final message.
-7. **Finale**: a night sky with stars, a moon, shooting stars and your photo, plus *Replay Our Surprise ✨*.
+It's designed **for phones first**. When she tilts her phone, the 3D scenes tilt with it (on iPhone, Safari asks for motion access when she taps *Open Your Surprise*). A bottom dock jumps between chapters, and on Android, taps give tiny vibrations.
+
+1. **Entrance**: a glowing pink screen with hearts floating at different depths and a 3D envelope with hearts orbiting around it. Tapping *Open Your Surprise 💌* (or the envelope) opens it and reveals the site.
+2. **Celebration**: the headline flips in letter by letter, plus your message, balloons, confetti, and a round 3D cake that slowly turns. She blows out the candles by tapping them, or by tapping *🎤 Or blow on your phone* and really blowing into the microphone.
+3. **Our Memories**: a 3D swipeable carousel of polaroids. Tap the front photo for a full-screen viewer that swings in 3D as she swipes. *See all photos at once* switches to a grid.
+4. **Our Love Story**: an animated timeline. Cards swing in like little doors, the line draws itself as she scrolls, and the last milestone shows today's date automatically.
+5. **The Letter**: cream paper lifts up off the table, and your letter writes itself in handwriting.
+6. **The Gift**: a real 3D gift box she can spin with a finger. Tapping it sends the lid flying, beams of light shoot out, and your final message appears.
+7. **Finale**: a night sky with depth, a moon, shooting stars, and your photo as a 3D card (tap it to flip it over to *"I love you"*), plus *Replay Our Surprise ✨*.
 
 ## ✏️ How to personalize it
 
